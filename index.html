@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kandela: Neuro-Glitch</title>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg-color: #050a0f;
+            --grid-line: #1a2f38;
+            --text-main: #00ff9d;
+            --text-warn: #ff3366;
+            --text-info: #00ccff;
+            --text-analyst: #ffbb00;
+            --glow: 0 0 10px rgba(0, 255, 157, 0.5);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Share Tech Mono', monospace;
+            overflow: hidden;
+            touch-action: none;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            user-select: none;
+        }
+
+        /* SCANLINES */
+        body::before {
+            content: " ";
+            display: block; position: absolute; top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 2; background-size: 100% 2px, 3px 100%; pointer-events: none;
+        }
+
+        /* SEGURANÇA */
+        #access-denied {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 99999; flex-direction: column; justify-content: center; align-items: center;
+            text-align: center; padding: 20px;
+        }
+        #access-denied h1 { color: #ff0055; border-bottom: 2px solid #ff0055; }
+
+        /* UI LAYER */
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; padding: 15px; box-sizing: border-box;
+            display: flex; justify-content: space-between; z-index: 10; pointer-events: none;
+        }
+
+        .hud-box {
+            background: rgba(5, 10, 15, 0.8);
+            border: 1px solid var(--grid-line);
+            padding: 5px 10px;
+            border-radius: 4px;
+            pointer-events: auto;
+        }
+
+        .health-bar {
+            width: 150px; height: 10px; background: #111; border: 1px solid #333;
+            margin-top: 5px; position: relative; overflow: hidden;
+        }
+        .health-fill {
+            width: 100%; height: 100%; background: var(--text-main);
+            transition: width 0.2s, background-color 0.2s;
+            box-shadow: 0 0 5px var(--text-main);
+        }
+
+        /* PASSIVE FEEDBACK (BOTTOM) */
+        #passive-feedback {
+            position: absolute; bottom: 30px; left: 0; width: 100%;
+            text-align: center; font-size: 1rem; color: #888;
+            pointer-events: none; z-index: 15;
+            height: 20px; opacity: 0; transition: opacity 0.5s;
+            text-shadow: 0 0 5px rgba(0,0,0,0.8);
+            font-weight: bold; letter-spacing: 1px;
+        }
+
+        /* GAME AREA */
+        #game-container {
+            position: relative; width: 100%; height: 100%;
+            cursor: crosshair;
+        }
+
+        canvas { display: block; width: 100%; height: 100%; }
+
+        /* OVERLAY / MENUS */
+        #overlay, #guide-modal {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(5, 10, 15, 0.95);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 50; text-align: center; backdrop-filter: blur(5px);
+        }
+        
+        #guide-modal { display: none; justify-content: flex-start; padding-top: 40px; z-index: 60; }
+
+        button {
+            background: rgba(0, 255, 157, 0.1);
+            border: 1px solid var(--text-main);
+            color: var(--text-main);
+            padding: 15px 20px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1.1rem;
+            cursor: pointer; text-transform: uppercase; margin: 8px;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px rgba(0, 255, 157, 0.2);
+            width: 240px;
+        }
+        button:active { background: var(--text-main); color: #000; transform: scale(0.98); }
+        
+        .btn-secondary { border-color: var(--text-info); color: var(--text-info); font-size: 0.9rem; padding: 10px; }
+        .btn-analyst { border-color: var(--text-analyst); color: var(--text-analyst); box-shadow: 0 0 10px rgba(255, 187, 0, 0.2); }
+        .btn-analyst:active { background: var(--text-analyst); color: #000; }
+        .btn-expert { border-color: #ff3366; color: #ff3366; box-shadow: 0 0 10px rgba(255, 51, 102, 0.2); }
+        .btn-expert:active { background: #ff3366; color: #000; }
+
+        .channel-toggle {
+            margin-bottom: 20px;
+            display: flex; align-items: center; gap: 10px;
+            border: 1px solid #333; padding: 8px 20px; border-radius: 4px;
+            background: rgba(0,0,0,0.5); cursor: pointer;
+            transition: all 0.3s;
+        }
+        .channel-toggle:hover { border-color: var(--text-main); background: rgba(0, 255, 157, 0.1); }
+        
+        .led-indicator {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: #333; box-shadow: inset 0 0 2px #000;
+            transition: background 0.3s, box-shadow 0.3s;
+        }
+        .led-on { background: var(--text-main); box-shadow: 0 0 8px var(--text-main); }
+
+        .glitch-text {
+            animation: glitch 1s linear infinite;
+            font-size: 2rem; margin-bottom: 10px;
+            color: var(--text-warn); text-shadow: 2px 2px #00ccff;
+        }
+
+        @keyframes glitch {
+            2%, 64% { transform: translate(2px,0) skew(0deg); }
+            4%, 60% { transform: translate(-2px,0) skew(0deg); }
+            62% { transform: translate(0,0) skew(5deg); }
+        }
+
+        /* GUIDE CONTENT */
+        .guide-content {
+            width: 90%; max-width: 600px; height: 70%; overflow-y: auto;
+            text-align: left; border: 1px solid var(--grid-line); padding: 15px;
+            background: rgba(0,0,0,0.5);
+        }
+        .guide-item {
+            margin-bottom: 20px; border-bottom: 1px solid #222; padding-bottom: 10px;
+            display: flex; align-items: center;
+        }
+        .guide-icon { width: 40px; height: 40px; margin-right: 15px; border-radius: 50%; border: 2px solid; }
+        .guide-info h3 { margin: 0 0 5px 0; font-size: 1.1rem; }
+        .guide-info p { margin: 0; font-size: 0.85rem; color: #aaa; }
+        .tag { font-size: 0.7rem; padding: 2px 6px; border-radius: 3px; margin-left: 10px; vertical-align: middle; }
+        .tag-bad { background: rgba(255, 51, 102, 0.2); color: #ff3366; border: 1px solid #ff3366; }
+        .tag-good { background: rgba(0, 255, 157, 0.2); color: #00ff9d; border: 1px solid #00ff9d; }
+
+        /* FLOATING TEXT */
+        .float-text {
+            position: absolute; font-weight: bold; pointer-events: none;
+            animation: floatUp 1.5s forwards; z-index: 20;
+            text-shadow: 0 0 3px #000;
+            text-align: center; white-space: pre;
+            font-size: 0.8rem; width: 200px; margin-left: -100px; 
+        }
+        @keyframes floatUp {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-40px); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="access-denied">
+        <h1>🚫 ACESSO RESTRITO</h1>
+        <p>Protocolo de Segurança Ativado.</p>
+    </div>
+
+    <div id="ui-layer">
+        <div class="hud-box">
+            <div>INTEGRIDADE</div>
+            <div class="health-bar"><div id="health-fill" class="health-fill"></div></div>
+        </div>
+        <div class="hud-box" style="text-align: right;">
+            <div style="font-size: 0.7em; margin-bottom: 2px;" id="diff-label">MODO: <span id="diff-val" style="color: #fff;">ESTÁGIO</span></div>
+            <div>VEL: <span id="speed-display">100</span>%</div>
+            <div style="font-size: 0.7em; color: #888;">SCORE: <span id="score">0</span></div>
+        </div>
+    </div>
+
+    <!-- FEEDBACK PASSIVO INFERIOR -->
+    <div id="passive-feedback"></div>
+
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <div id="overlay">
+        <h1 class="glitch-text">NEURO-GLITCH</h1>
+        
+        <!-- TOGGLE MULTI-CHANNEL -->
+        <div id="channelToggle" class="channel-toggle">
+            <div id="leds-container" style="display:flex; gap:4px;">
+                <div class="led-indicator led-on"></div>
+                <div class="led-indicator"></div>
+                <div class="led-indicator"></div>
+                <div class="led-indicator"></div>
+            </div>
+            <span id="ch-text" style="font-size: 0.9rem; color: #aaa; margin-left:10px;">1 CANAL</span>
+        </div>
+
+        <p style="max-width: 80%; line-height: 1.2; color: #ddd; font-size: 0.9rem; margin-bottom: 20px;">
+            Selecione o nível de acesso:
+        </p>
+        
+        <button id="startInternBtn">ESTÁGIO</button>
+        <div style="font-size: 0.7rem; color: #888; margin-bottom: 5px;">Sinais coloridos. Velocidade padrão.</div>
+        
+        <button id="startAnalystBtn" class="btn-analyst">ANALISTA</button>
+        <div style="font-size: 0.7rem; color: #ffbb00; margin-bottom: 5px;">Acelera a cada acerto. Camuflagem.</div>
+
+        <button id="startExpertBtn" class="btn-expert">ESPECIALISTA</button>
+        <div style="font-size: 0.7rem; color: #ff3366; margin-bottom: 15px;">Monocromático. Reconhecimento puro.</div>
+        
+        <button id="guideBtn" class="btn-secondary">GUIA TÉCNICO</button>
+    </div>
+
+    <div id="guide-modal">
+        <h2 style="color: var(--text-info)">BIBLIOTECA DE SINAIS</h2>
+        <div class="guide-content" id="guide-list"></div>
+        <button id="closeGuideBtn" class="btn-secondary">VOLTAR</button>
+    </div>
+
+<script>
+/**
+ * NEURO-GLITCH v5.1 (Final Polish)
+ * - Feedback de sinal preservado centralizado e numerado.
+ * - Indicador de Dificuldade na HUD.
+ */
+
+// --- SEGURANÇA ---
+(function() {
+    const tg = window.Telegram.WebApp;
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const isTelegram = tg.initData && tg.initData.length > 0;
+    if (!isTelegram && !isLocal) {
+        document.getElementById('access-denied').style.display = 'flex';
+        document.getElementById('overlay').style.display = 'none';
+        throw new Error("Access Denied");
+    }
+    if(isTelegram) {
+        tg.expand();
+        tg.disableVerticalSwipes();
+    }
+})();
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const ui = {
+    score: document.getElementById('score'),
+    health: document.getElementById('health-fill'),
+    speed: document.getElementById('speed-display'),
+    diffVal: document.getElementById('diff-val'),
+    overlay: document.getElementById('overlay'),
+    guide: document.getElementById('guide-modal'),
+    guideList: document.getElementById('guide-list'),
+    feedback: document.getElementById('passive-feedback'),
+    channelToggle: document.getElementById('channelToggle'),
+    chText: document.getElementById('ch-text'),
+    ledsContainer: document.getElementById('leds-container')
+};
+
+const TYPES = {
+    ART_60HZ: { id: '60hz', type: 'BAD', color: '#ff3366', name: 'Rede 60Hz', desc: 'Oscilação constante e grossa.', points: 10 },
+    ART_DRIFT: { id: 'drift', type: 'BAD', color: '#ff9900', name: 'Drift', desc: 'Onda muito lenta (Linha de base).', points: 15 },
+    ART_EMG: { id: 'emg', type: 'BAD', color: '#ffff00', name: 'Ruído Muscular', desc: 'Alta frequência caótica.', points: 20 },
+    ART_EKG: { id: 'ekg', type: 'BAD', color: '#ff55aa', name: 'Artefato EKG', desc: 'Complexo QRS rítmico.', points: 25 },
+    ART_POP: { id: 'pop', type: 'BAD', color: '#ffcc00', name: 'Eletrodo Pop', desc: 'Salto vertical abrupto.', points: 15 },
+
+    SIG_SPIKE: { id: 'spike', type: 'GOOD', color: '#00ccff', name: 'Ponta Epiléptica', desc: 'Espícula aguda + onda lenta.', penalty: 20 },
+    SIG_MU: { id: 'mu', type: 'GOOD', color: '#00ff9d', name: 'Ritmo Mu', desc: 'Ritmo em arco.', penalty: 10 },
+    SIG_K: { id: 'k', type: 'GOOD', color: '#bd00ff', name: 'Complexo K', desc: 'Deflexão bifásica do sono.', penalty: 15 },
+    SIG_SPINDLE: { id: 'spindle', type: 'GOOD', color: '#0099ff', name: 'Fuso do Sono', desc: 'Surto fusiforme (12-14Hz).', penalty: 15 },
+    SIG_MEP: { id: 'mep', type: 'GOOD', color: '#ffffff', name: 'PEM (MEP)', desc: 'Potencial Evocado Motor.', penalty: 25 },
+    
+    BASELINE: { id: 'base', type: 'NEUTRAL', color: '#1a2f38', name: 'Linha de Base', desc: '-' }
+};
+
+let gameState = {
+    active: false,
+    difficulty: 'INTERN',
+    numChannels: 1, 
+    score: 0,
+    integrity: 100,
+    baseSpeed: 150,
+    currentSpeed: 150,
+    accelerationRate: 0.15,
+    analystBoost: 0,
+    timeElapsed: 0,
+    lastTime: 0,
+    streams: []
+};
+
+class WaveSegment {
+    constructor(x, width, typeDef) {
+        this.x = x;
+        this.width = width;
+        this.def = typeDef;
+        this.active = true; 
+        this.phaseOffset = Math.random() * 100;
+        this.camo = false; 
+    }
+
+    get endX() { return this.x + this.width; }
+
+    update(dt, speed) {
+        this.x -= speed * dt;
+    }
+
+    getY(relX) {
+        if (!this.active) return 0; 
+
+        const t = (relX + this.phaseOffset) * 0.1;
+        const w = this.width;
+        let envelope = 1;
+        const fadeSize = 20;
+        if (relX < fadeSize) envelope = relX / fadeSize;
+        else if (relX > w - fadeSize) envelope = (w - relX) / fadeSize;
+
+        switch(this.def.id) {
+            case 'base': return (Math.random() - 0.5) * 2;
+            case '60hz': return Math.sin(t * 5) * 25 * envelope;
+            case 'drift': return Math.sin(t * 0.3) * 40 * envelope;
+            case 'emg': return (Math.random() - 0.5) * 35 * envelope;
+            case 'ekg': 
+                let cycle = (relX % 150);
+                if (cycle < 20) return (1 - Math.abs(cycle - 10)/10) * -40 * envelope;
+                return 0;
+            case 'pop':
+                let popX = relX / w;
+                if (popX < 0.1) return (popX / 0.1) * -50;
+                else return -50 * Math.exp(-(popX - 0.1) * 5);
+            case 'spike':
+                let sx = relX / w;
+                if (sx < 0.3) return -70 * (1 - Math.abs(sx - 0.15)/0.15) * envelope;
+                else return 25 * Math.sin((sx - 0.3) * Math.PI) * envelope;
+            case 'mu': return (Math.abs(Math.sin(t * 2)) * 25 - 12) * envelope;
+            case 'k': 
+                let kx = relX / w;
+                return 60 * Math.sin(kx * Math.PI * 2) * Math.exp(-4 * Math.pow(kx - 0.5, 2));
+            case 'spindle':
+                return Math.sin(t * 8) * 20 * Math.sin((relX/w) * Math.PI);
+            case 'mep':
+                let mx = relX / w;
+                return 50 * Math.sin(mx * Math.PI * 4) * Math.exp(-mx * 3) * envelope;
+        }
+        return 0;
+    }
+}
+
+// --- ENGINE ---
+
+function initGame() {
+    resize();
+    window.addEventListener('resize', resize);
+    populateGuide();
+
+    document.getElementById('startInternBtn').addEventListener('click', () => startGame('INTERN'));
+    document.getElementById('startAnalystBtn').addEventListener('click', () => startGame('ANALYST'));
+    document.getElementById('startExpertBtn').addEventListener('click', () => startGame('EXPERT'));
+    
+    ui.channelToggle.addEventListener('click', toggleChannels);
+
+    document.getElementById('guideBtn').addEventListener('click', () => {
+        ui.guide.style.display = 'flex';
+        ui.overlay.style.display = 'none';
+    });
+    document.getElementById('closeGuideBtn').addEventListener('click', () => {
+        ui.guide.style.display = 'none';
+        ui.overlay.style.display = 'flex';
+    });
+
+    const inputHandler = (e) => {
+        if (!gameState.active) return;
+        e.preventDefault();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        checkHit(clientX, clientY);
+    };
+    canvas.addEventListener('mousedown', inputHandler);
+    canvas.addEventListener('touchstart', inputHandler, {passive: false});
+
+    requestAnimationFrame(loop);
+}
+
+function toggleChannels() {
+    if (gameState.numChannels === 1) gameState.numChannels = 2;
+    else if (gameState.numChannels === 2) gameState.numChannels = 4;
+    else gameState.numChannels = 1;
+    updateChannelUI();
+}
+
+function updateChannelUI() {
+    const n = gameState.numChannels;
+    ui.chText.innerText = n + (n === 1 ? " CANAL" : " CANAIS");
+    ui.chText.style.color = n > 1 ? "#fff" : "#aaa";
+    let leds = ui.ledsContainer.children;
+    for(let i=0; i<4; i++) {
+        if (i < n) leds[i].classList.add('led-on');
+        else leds[i].classList.remove('led-on');
+    }
+}
+
+function startGame(difficulty) {
+    gameState.active = true;
+    gameState.difficulty = difficulty;
+    gameState.score = 0;
+    gameState.integrity = 100;
+    gameState.baseSpeed = 150;
+    gameState.currentSpeed = 150;
+    gameState.analystBoost = 0;
+    gameState.timeElapsed = 0;
+    gameState.lastTime = performance.now();
+    
+    gameState.streams = [];
+    for(let i=0; i<gameState.numChannels; i++) gameState.streams.push([]);
+
+    for (let ch = 0; ch < gameState.numChannels; ch++) {
+        let cursor = 0;
+        while(cursor < canvas.width) {
+            let seg = new WaveSegment(cursor, 200, TYPES.BASELINE);
+            gameState.streams[ch].push(seg);
+            cursor += 200;
+        }
+    }
+
+    // Configura indicador de dificuldade
+    let diffName = "ESTÁGIO";
+    let diffColor = "#888";
+    if (difficulty === 'ANALYST') { diffName = "ANALISTA"; diffColor = "#ffbb00"; }
+    if (difficulty === 'EXPERT') { diffName = "ESPEC."; diffColor = "#ff3366"; }
+    ui.diffVal.innerText = diffName;
+    ui.diffVal.style.color = diffColor;
+
+    ui.overlay.style.display = 'none';
+    updateHUD();
+}
+
+function spawnNextSegment(channelIdx) {
+    const stream = gameState.streams[channelIdx];
+    const last = stream[stream.length - 1];
+    const startX = last ? last.endX : canvas.width;
+
+    let eventChance = 0.3 + (gameState.timeElapsed / 60) * 0.2; 
+    eventChance = Math.min(0.8, eventChance); 
+
+    let type = TYPES.BASELINE;
+    let width = 100 + Math.random() * 100;
+
+    if (Math.random() < eventChance) {
+        const isBad = Math.random() < 0.6; 
+        let badPool = [TYPES.ART_60HZ, TYPES.ART_DRIFT];
+        let goodPool = [TYPES.SIG_SPIKE, TYPES.SIG_MU];
+
+        if (gameState.timeElapsed > 10) { badPool.push(TYPES.ART_EMG); goodPool.push(TYPES.SIG_K); }
+        if (gameState.timeElapsed > 20) { badPool.push(TYPES.ART_EKG); goodPool.push(TYPES.SIG_SPINDLE); }
+        if (gameState.timeElapsed > 30) { badPool.push(TYPES.ART_POP); goodPool.push(TYPES.SIG_MEP); }
+
+        type = isBad ? 
+            badPool[Math.floor(Math.random() * badPool.length)] :
+            goodPool[Math.floor(Math.random() * goodPool.length)];
+        
+        width = 150 + Math.random() * 100; 
+    }
+
+    const newSeg = new WaveSegment(startX, width, type);
+    
+    if (gameState.difficulty === 'ANALYST' && gameState.currentSpeed > 400 && type.type === 'BAD') {
+        if (Math.random() < 0.5) newSeg.camo = true;
+    }
+
+    stream.push(newSeg);
+}
+
+function getChannelCenters() {
+    let centers = [];
+    const step = canvas.height / gameState.numChannels;
+    for(let i=0; i<gameState.numChannels; i++) {
+        centers.push(step * i + step/2);
+    }
+    return centers;
+}
+
+function checkHit(x, y) {
+    const rect = canvas.getBoundingClientRect();
+    const canvasX = x - rect.left;
+    const canvasY = y - rect.top;
+    
+    const channelsY = getChannelCenters();
+    const hitTolerance = (canvas.height / gameState.numChannels) / 2 * 0.8; 
+
+    for (let ch = 0; ch < gameState.numChannels; ch++) {
+        const cy = channelsY[ch];
+        if (Math.abs(canvasY - cy) < hitTolerance) {
+            const stream = gameState.streams[ch];
+            for (let seg of stream) {
+                if (canvasX >= seg.x && canvasX <= seg.endX && seg.def.type !== 'NEUTRAL') {
+                    if (seg.active) {
+                        processHit(seg, canvasX, canvasY);
+                        return; 
+                    }
+                }
+            }
+        }
+    }
+}
+
+function processHit(seg, x, y) {
+    let msg = "";
+    let color = "";
+
+    if (seg.def.type === 'BAD') {
+        let multiplier = 1;
+        if (gameState.difficulty === 'EXPERT') multiplier = 2;
+        if (gameState.difficulty === 'ANALYST') multiplier = 1.5;
+
+        gameState.score += Math.floor(seg.def.points * multiplier);
+        gameState.integrity = Math.min(100, gameState.integrity + 5);
+        seg.active = false; 
+        
+        if (gameState.difficulty === 'ANALYST') {
+            gameState.analystBoost += 0.01; 
+        }
+        
+        msg = `${seg.def.name}\nLIMPO!`;
+        color = '#00ff9d';
+        
+        if(window.Telegram.WebApp.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+    } else {
+        gameState.integrity -= 20;
+        msg = `${seg.def.name}\nERRO CLÍNICO!`;
+        color = '#ff3366';
+        if(window.Telegram.WebApp.HapticFeedback) window.Telegram.WebApp.HapticFeedback.notificationOccurred('error');
+    }
+    
+    showFloatText(msg, x, y, color);
+    updateHUD();
+}
+
+function showFloatText(text, x, y, color) {
+    const el = document.createElement('div');
+    el.className = 'float-text';
+    el.innerText = text;
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    el.style.color = color;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1500);
+}
+
+// NOVA FUNÇÃO DE FEEDBACK PASSIVO
+function showPassiveFeedback(name, channelIdx) {
+    // Adiciona prefixo do canal se houver mais de 1
+    let prefix = "";
+    if (gameState.numChannels > 1) {
+        prefix = `(${channelIdx + 1}c) `;
+    }
+    
+    ui.feedback.innerText = `SINAL PRESERVADO: ${prefix}${name.toUpperCase()}`;
+    ui.feedback.style.opacity = 1;
+    ui.feedback.style.color = '#00ccff';
+    
+    // Reset da animação/timeout
+    if (window.feedbackTimeout) clearTimeout(window.feedbackTimeout);
+    window.feedbackTimeout = setTimeout(() => { ui.feedback.style.opacity = 0; }, 2000);
+}
+
+function update(dt) {
+    if (!gameState.active) return;
+
+    gameState.timeElapsed += dt;
+    const timeMult = 1 + (gameState.timeElapsed / 8) * 0.15;
+    const analystMult = 1 + gameState.analystBoost;
+    gameState.currentSpeed = gameState.baseSpeed * timeMult * analystMult;
+
+    const channelsY = getChannelCenters();
+
+    for (let ch = 0; ch < gameState.numChannels; ch++) {
+        const stream = gameState.streams[ch];
+        
+        for (let i = 0; i < stream.length; i++) {
+            let seg = stream[i];
+            seg.update(dt, gameState.currentSpeed);
+        }
+
+        if (stream.length > 0) {
+            let first = stream[0];
+            if (first.endX < 0) {
+                if (first.def.type === 'BAD' && first.active) {
+                    gameState.integrity -= 15; 
+                }
+                if (first.def.type === 'GOOD' && first.active) {
+                    showPassiveFeedback(first.def.name, ch); // Passa indice do canal
+                    gameState.score += 5; 
+                }
+                stream.shift();
+            }
+        }
+
+        const last = stream[stream.length - 1];
+        if (last.endX < canvas.width + 200) {
+            spawnNextSegment(ch);
+        }
+    }
+
+    if (gameState.integrity <= 0) gameOver();
+    updateHUD();
+}
+
+function draw() {
+    ctx.fillStyle = '#050a0f';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    const channelsY = getChannelCenters();
+
+    // Grid
+    ctx.strokeStyle = '#1a2f38';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    channelsY.forEach(cy => {
+        ctx.moveTo(0, cy); ctx.lineTo(canvas.width, cy);
+    });
+    ctx.stroke();
+
+    if (!gameState.active) return;
+
+    for (let ch = 0; ch < gameState.numChannels; ch++) {
+        const stream = gameState.streams[ch];
+        const cy = channelsY[ch];
+
+        ctx.beginPath();
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        for (let seg of stream) {
+            ctx.beginPath();
+            
+            let color;
+            if (seg.def.type === 'NEUTRAL') {
+                color = '#00ff9d'; // Baseline sempre verde
+            }
+            else if (gameState.difficulty === 'EXPERT') {
+                if (!seg.active && seg.def.type === 'BAD') color = '#1a4030';
+                else color = '#00ff9d'; 
+            } 
+            else if (gameState.difficulty === 'ANALYST') {
+                if (!seg.active) color = '#2a4a3a';
+                else if (seg.camo) color = '#00ff9d'; 
+                else color = seg.def.color;
+            }
+            else {
+                color = seg.active ? seg.def.color : '#2a4a3a';
+            }
+
+            ctx.strokeStyle = color;
+            
+            let glow = false;
+            if (gameState.difficulty === 'INTERN' && seg.def.type === 'BAD' && seg.active) glow = true;
+            if (gameState.difficulty === 'ANALYST' && seg.def.type === 'BAD' && seg.active && !seg.camo) glow = true;
+            
+            if (glow) {
+                ctx.shadowBlur = 15; ctx.shadowColor = color;
+            } else {
+                ctx.shadowBlur = 5; ctx.shadowColor = color; 
+            }
+
+            const step = 2; 
+            for (let i = 0; i <= seg.width; i+=step) {
+                let px = seg.x + i;
+                if (px < -10 || px > canvas.width + 10) continue;
+                let py = cy + seg.getY(i);
+                if (i===0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+        }
+    }
+}
+
+function loop(timestamp) {
+    let dt = (timestamp - gameState.lastTime) / 1000;
+    gameState.lastTime = timestamp;
+    if (dt > 0.1) dt = 0.1;
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+}
+
+function updateHUD() {
+    ui.score.innerText = Math.floor(gameState.score);
+    ui.speed.innerText = Math.floor((gameState.currentSpeed / gameState.baseSpeed) * 100);
+    ui.health.style.width = gameState.integrity + '%';
+    ui.health.style.backgroundColor = gameState.integrity > 50 ? '#00ff9d' : '#ff3366';
+}
+
+function gameOver() {
+    gameState.active = false;
+    if(window.Telegram.WebApp.HapticFeedback) window.Telegram.WebApp.HapticFeedback.notificationOccurred('error');
+    ui.overlay.style.display = 'flex';
+    
+    let rank = gameState.score > 1500 ? "SÊNIOR" : (gameState.score > 800 ? "PLENO" : "JÚNIOR");
+    
+    ui.overlay.innerHTML = `
+        <h1 style="color: #ff3366">SISTEMA FALHOU</h1>
+        <p>RANK: <strong style="color:#fff">${rank}</strong></p>
+        <div class="hud-box" style="margin: 20px; padding: 20px;">
+            SCORE FINAL: <span style="color: white; font-size: 1.5em">${Math.floor(gameState.score)}</span>
+        </div>
+        <button onclick="location.reload()">REINICIAR SISTEMA</button>
+    `;
+}
+
+function populateGuide() {
+    let html = '';
+    for (let key in TYPES) {
+        const t = TYPES[key];
+        if (t.type === 'NEUTRAL') continue;
+        let tagClass = t.type === 'BAD' ? 'tag-bad' : 'tag-good';
+        let tagText = t.type === 'BAD' ? 'ELIMINAR' : 'PRESERVAR';
+        html += `
+        <div class="guide-item">
+            <div class="guide-icon" style="border-color: ${t.color}; background: radial-gradient(${t.color} 0%, transparent 70%);"></div>
+            <div class="guide-info">
+                <h3>${t.name} <span class="tag ${tagClass}">${tagText}</span></h3>
+                <p>${t.desc}</p>
+            </div>
+        </div>`;
+    }
+    ui.guideList.innerHTML = html;
+}
+
+function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+
+// Start
+initGame();
+
+</script>
+</body>
+</html>
