@@ -243,6 +243,8 @@
 
     <div id="overlay">
         <h1 class="glitch-text">NEURO-GLITCH</h1>
+        <!-- VERSÃO NO TOPO -->
+        <div style="font-size: 0.7rem; color: #444; margin-top: -5px; margin-bottom: 15px;">v5.6</div>
         
         <!-- INSTRUÇÕES BREVES -->
         <div style="margin-bottom: 20px; border: 1px solid #333; padding: 10px; border-radius: 4px; background: rgba(0,0,0,0.3); max-width: 80%;">
@@ -283,9 +285,9 @@
 
 <script>
 /**
- * NEURO-GLITCH v5.5 (Final Release)
- * - Fix: Sinais clínicos "queimados" não geram feedback de "Preservado".
- * - Visual: Sinais destruídos ficam opacos e cinzas.
+ * NEURO-GLITCH v5.6 (Final Release)
+ * - Version number added to Start Screen.
+ * - "Precisão Média" changed to "Precisão Clínica" in Ultra Score calculation display.
  */
 
 // --- SEGURANÇA ---
@@ -351,8 +353,11 @@ let gameState = {
     streams: [],
     
     stats: {
-        artifactsSpawned: 0, artifactsCleared: 0,
-        clinicalSpawned: 0, clinicalPreserved: 0, clinicalDestroyed: 0,
+        artifactsSpawned: 0,
+        artifactsCleared: 0,
+        clinicalSpawned: 0,
+        clinicalPreserved: 0,
+        clinicalDestroyed: 0,
         maxSpeedPercent: 100
     }
 };
@@ -365,7 +370,7 @@ class WaveSegment {
         this.active = true; 
         this.phaseOffset = Math.random() * 100;
         this.camo = false; 
-        this.destroyed = false; // Novo estado: Sinal Clínico "queimado"
+        this.destroyed = false; 
     }
 
     get endX() { return this.x + this.width; }
@@ -846,7 +851,7 @@ function gameOver() {
         <div class="ultra-score-box">
             <div style="font-size: 0.9em; color: var(--text-info); letter-spacing: 2px;">ULTRA SCORE</div>
             <div style="font-size: 2em; color: #fff; font-weight: bold; text-shadow: 0 0 10px var(--text-info);">${ultraScore}</div>
-            <div class="calc-detail">Score + (Precisão Média × Vel Máxima)</div>
+            <div class="calc-detail">Score + (Precisão Clínica × Vel Máxima)</div>
         </div>
 
         <button onclick="location.reload()">REINICIAR SISTEMA</button>
