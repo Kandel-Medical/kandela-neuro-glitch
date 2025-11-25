@@ -54,15 +54,16 @@
         }
 
         .hud-box {
-            background: rgba(5, 10, 15, 0.8);
+            background: rgba(5, 10, 15, 0.9);
             border: 1px solid var(--grid-line);
             padding: 5px 10px;
             border-radius: 4px;
             pointer-events: auto;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
         }
 
         .health-bar {
-            width: 150px; height: 10px; background: #111; border: 1px solid #333;
+            width: 120px; height: 8px; background: #111; border: 1px solid #333;
             margin-top: 5px; position: relative; overflow: hidden;
         }
         .health-fill {
@@ -71,7 +72,7 @@
             box-shadow: 0 0 5px var(--text-main);
         }
 
-        /* PASSIVE FEEDBACK (BOTTOM) */
+        /* PASSIVE FEEDBACK */
         #passive-feedback {
             position: absolute; bottom: 30px; left: 0; width: 100%;
             text-align: center; font-size: 1rem; color: #888;
@@ -92,7 +93,7 @@
         /* OVERLAY / MENUS */
         #overlay, #guide-modal {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(5, 10, 15, 0.95);
+            background: rgba(5, 10, 15, 0.96);
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             z-index: 50; text-align: center; backdrop-filter: blur(5px);
         }
@@ -103,10 +104,10 @@
             background: rgba(0, 255, 157, 0.1);
             border: 1px solid var(--text-main);
             color: var(--text-main);
-            padding: 15px 20px;
+            padding: 12px 20px;
             font-family: 'Share Tech Mono', monospace;
             font-size: 1.1rem;
-            cursor: pointer; text-transform: uppercase; margin: 8px;
+            cursor: pointer; text-transform: uppercase; margin: 6px;
             transition: all 0.2s;
             box-shadow: 0 0 10px rgba(0, 255, 157, 0.2);
             width: 240px;
@@ -120,7 +121,7 @@
         .btn-expert:active { background: #ff3366; color: #000; }
 
         .channel-toggle {
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             display: flex; align-items: center; gap: 10px;
             border: 1px solid #333; padding: 8px 20px; border-radius: 4px;
             background: rgba(0,0,0,0.5); cursor: pointer;
@@ -137,7 +138,7 @@
 
         .glitch-text {
             animation: glitch 1s linear infinite;
-            font-size: 2rem; margin-bottom: 10px;
+            font-size: 2rem; margin-bottom: 5px;
             color: var(--text-warn); text-shadow: 2px 2px #00ccff;
         }
 
@@ -145,6 +146,42 @@
             2%, 64% { transform: translate(2px,0) skew(0deg); }
             4%, 60% { transform: translate(-2px,0) skew(0deg); }
             62% { transform: translate(0,0) skew(5deg); }
+        }
+
+        /* STATS TABLE */
+        .stats-container {
+            background: rgba(0,0,0,0.6);
+            border: 1px solid #333;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            width: 90%;
+            max-width: 450px;
+            text-align: left;
+        }
+        .stat-row {
+            display: flex; justify-content: space-between;
+            margin-bottom: 8px; font-size: 0.85rem;
+            border-bottom: 1px solid #222; padding-bottom: 4px;
+        }
+        .stat-row:last-child { border: none; margin-bottom: 0; }
+        .stat-val { font-weight: bold; }
+        .val-good { color: var(--text-main); }
+        .val-bad { color: var(--text-warn); }
+        .val-neu { color: var(--text-info); }
+        
+        .ultra-score-box {
+            background: linear-gradient(90deg, #1a2f38, #050a0f);
+            border: 2px solid var(--text-info);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+            width: 85%; max-width: 400px;
+            box-shadow: 0 0 15px rgba(0, 204, 255, 0.15);
+        }
+        .calc-detail {
+            font-size: 0.7rem; color: #888; margin-top: 5px;
         }
 
         /* GUIDE CONTENT */
@@ -187,12 +224,12 @@
 
     <div id="ui-layer">
         <div class="hud-box">
-            <div>INTEGRIDADE</div>
+            <div style="font-size:0.8em; margin-bottom:2px;">INTEGRIDADE</div>
             <div class="health-bar"><div id="health-fill" class="health-fill"></div></div>
         </div>
         <div class="hud-box" style="text-align: right;">
             <div style="font-size: 0.7em; margin-bottom: 2px;" id="diff-label">MODO: <span id="diff-val" style="color: #fff;">ESTÁGIO</span></div>
-            <div>VEL: <span id="speed-display">100</span>%</div>
+            <div style="font-size: 0.8em;">VEL: <span id="speed-display">100</span>%</div>
             <div style="font-size: 0.7em; color: #888;">SCORE: <span id="score">0</span></div>
         </div>
     </div>
@@ -207,6 +244,13 @@
     <div id="overlay">
         <h1 class="glitch-text">NEURO-GLITCH</h1>
         
+        <!-- INSTRUÇÕES BREVES -->
+        <div style="margin-bottom: 20px; border: 1px solid #333; padding: 10px; border-radius: 4px; background: rgba(0,0,0,0.3); max-width: 80%;">
+            <span style="color: var(--text-info); font-weight: bold;">DIRETIVA:</span><br>
+            Toque nos <span style="color: var(--text-warn)">ARTEFATOS</span> para limpar.<br>
+            Poupe os <span style="color: var(--text-main)">SINAIS CLÍNICOS</span>.
+        </div>
+
         <!-- TOGGLE MULTI-CHANNEL -->
         <div id="channelToggle" class="channel-toggle">
             <div id="leds-container" style="display:flex; gap:4px;">
@@ -218,20 +262,17 @@
             <span id="ch-text" style="font-size: 0.9rem; color: #aaa; margin-left:10px;">1 CANAL</span>
         </div>
 
-        <p style="max-width: 80%; line-height: 1.2; color: #ddd; font-size: 0.9rem; margin-bottom: 20px;">
+        <p style="max-width: 80%; line-height: 1.2; color: #ddd; font-size: 0.8rem; margin-bottom: 10px;">
             Selecione o nível de acesso:
         </p>
         
         <button id="startInternBtn">ESTÁGIO</button>
-        <div style="font-size: 0.7rem; color: #888; margin-bottom: 5px;">Sinais coloridos. Velocidade padrão.</div>
         
         <button id="startAnalystBtn" class="btn-analyst">ANALISTA</button>
-        <div style="font-size: 0.7rem; color: #ffbb00; margin-bottom: 5px;">Acelera a cada acerto. Camuflagem.</div>
 
         <button id="startExpertBtn" class="btn-expert">ESPECIALISTA</button>
-        <div style="font-size: 0.7rem; color: #ff3366; margin-bottom: 15px;">Monocromático. Reconhecimento puro.</div>
         
-        <button id="guideBtn" class="btn-secondary">GUIA TÉCNICO</button>
+        <button id="guideBtn" class="btn-secondary" style="margin-top: 20px;">GUIA TÉCNICO</button>
     </div>
 
     <div id="guide-modal">
@@ -242,9 +283,9 @@
 
 <script>
 /**
- * NEURO-GLITCH v5.1 (Final Polish)
- * - Feedback de sinal preservado centralizado e numerado.
- * - Indicador de Dificuldade na HUD.
+ * NEURO-GLITCH v5.5 (Final Release)
+ * - Fix: Sinais clínicos "queimados" não geram feedback de "Preservado".
+ * - Visual: Sinais destruídos ficam opacos e cinzas.
  */
 
 // --- SEGURANÇA ---
@@ -307,7 +348,13 @@ let gameState = {
     analystBoost: 0,
     timeElapsed: 0,
     lastTime: 0,
-    streams: []
+    streams: [],
+    
+    stats: {
+        artifactsSpawned: 0, artifactsCleared: 0,
+        clinicalSpawned: 0, clinicalPreserved: 0, clinicalDestroyed: 0,
+        maxSpeedPercent: 100
+    }
 };
 
 class WaveSegment {
@@ -318,6 +365,7 @@ class WaveSegment {
         this.active = true; 
         this.phaseOffset = Math.random() * 100;
         this.camo = false; 
+        this.destroyed = false; // Novo estado: Sinal Clínico "queimado"
     }
 
     get endX() { return this.x + this.width; }
@@ -327,7 +375,7 @@ class WaveSegment {
     }
 
     getY(relX) {
-        if (!this.active) return 0; 
+        if (!this.active && !this.destroyed) return 0; 
 
         const t = (relX + this.phaseOffset) * 0.1;
         const w = this.width;
@@ -431,6 +479,12 @@ function startGame(difficulty) {
     gameState.timeElapsed = 0;
     gameState.lastTime = performance.now();
     
+    gameState.stats = {
+        artifactsSpawned: 0, artifactsCleared: 0,
+        clinicalSpawned: 0, clinicalPreserved: 0, clinicalDestroyed: 0,
+        maxSpeedPercent: 100
+    };
+    
     gameState.streams = [];
     for(let i=0; i<gameState.numChannels; i++) gameState.streams.push([]);
 
@@ -443,7 +497,6 @@ function startGame(difficulty) {
         }
     }
 
-    // Configura indicador de dificuldade
     let diffName = "ESTÁGIO";
     let diffColor = "#888";
     if (difficulty === 'ANALYST') { diffName = "ANALISTA"; diffColor = "#ffbb00"; }
@@ -480,6 +533,9 @@ function spawnNextSegment(channelIdx) {
             goodPool[Math.floor(Math.random() * goodPool.length)];
         
         width = 150 + Math.random() * 100; 
+        
+        if (type.type === 'BAD') gameState.stats.artifactsSpawned++;
+        if (type.type === 'GOOD') gameState.stats.clinicalSpawned++;
     }
 
     const newSeg = new WaveSegment(startX, width, type);
@@ -492,10 +548,12 @@ function spawnNextSegment(channelIdx) {
 }
 
 function getChannelCenters() {
+    const topPadding = 80; 
+    const availableHeight = canvas.height - topPadding;
     let centers = [];
-    const step = canvas.height / gameState.numChannels;
+    const step = availableHeight / gameState.numChannels;
     for(let i=0; i<gameState.numChannels; i++) {
-        centers.push(step * i + step/2);
+        centers.push(topPadding + (step * i) + step/2);
     }
     return centers;
 }
@@ -514,7 +572,7 @@ function checkHit(x, y) {
             const stream = gameState.streams[ch];
             for (let seg of stream) {
                 if (canvasX >= seg.x && canvasX <= seg.endX && seg.def.type !== 'NEUTRAL') {
-                    if (seg.active) {
+                    if (seg.active && !seg.destroyed) { // Check active AND !destroyed
                         processHit(seg, canvasX, canvasY);
                         return; 
                     }
@@ -527,26 +585,42 @@ function checkHit(x, y) {
 function processHit(seg, x, y) {
     let msg = "";
     let color = "";
+    let pointsAdded = 0;
 
     if (seg.def.type === 'BAD') {
         let multiplier = 1;
         if (gameState.difficulty === 'EXPERT') multiplier = 2;
         if (gameState.difficulty === 'ANALYST') multiplier = 1.5;
+        
+        if (seg.camo) multiplier *= 1.5;
 
-        gameState.score += Math.floor(seg.def.points * multiplier);
+        pointsAdded = Math.floor(seg.def.points * multiplier);
+        gameState.score += pointsAdded;
         gameState.integrity = Math.min(100, gameState.integrity + 5);
         seg.active = false; 
+        gameState.stats.artifactsCleared++;
         
         if (gameState.difficulty === 'ANALYST') {
             gameState.analystBoost += 0.01; 
         }
         
-        msg = `${seg.def.name}\nLIMPO!`;
+        let bonusTxt = seg.camo ? " (CAMO)" : "";
+        msg = `${seg.def.name}${bonusTxt}\nLIMPO!\n+${pointsAdded}`;
         color = '#00ff9d';
+        
+        if (gameState.difficulty === 'ANALYST' && seg.camo) {
+             color = '#ffbb00';
+        }
         
         if(window.Telegram.WebApp.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
     } else {
+        // HIT GOOD SIGNAL
         gameState.integrity -= 20;
+        gameState.stats.clinicalDestroyed++;
+        
+        // Mark as DESTROYED (Queimado)
+        seg.destroyed = true; 
+        
         msg = `${seg.def.name}\nERRO CLÍNICO!`;
         color = '#ff3366';
         if(window.Telegram.WebApp.HapticFeedback) window.Telegram.WebApp.HapticFeedback.notificationOccurred('error');
@@ -567,19 +641,14 @@ function showFloatText(text, x, y, color) {
     setTimeout(() => el.remove(), 1500);
 }
 
-// NOVA FUNÇÃO DE FEEDBACK PASSIVO
 function showPassiveFeedback(name, channelIdx) {
-    // Adiciona prefixo do canal se houver mais de 1
     let prefix = "";
     if (gameState.numChannels > 1) {
         prefix = `(${channelIdx + 1}c) `;
     }
-    
     ui.feedback.innerText = `SINAL PRESERVADO: ${prefix}${name.toUpperCase()}`;
     ui.feedback.style.opacity = 1;
     ui.feedback.style.color = '#00ccff';
-    
-    // Reset da animação/timeout
     if (window.feedbackTimeout) clearTimeout(window.feedbackTimeout);
     window.feedbackTimeout = setTimeout(() => { ui.feedback.style.opacity = 0; }, 2000);
 }
@@ -591,6 +660,9 @@ function update(dt) {
     const timeMult = 1 + (gameState.timeElapsed / 8) * 0.15;
     const analystMult = 1 + gameState.analystBoost;
     gameState.currentSpeed = gameState.baseSpeed * timeMult * analystMult;
+    
+    let currentSpeedPct = Math.floor((gameState.currentSpeed / gameState.baseSpeed) * 100);
+    if (currentSpeedPct > gameState.stats.maxSpeedPercent) gameState.stats.maxSpeedPercent = currentSpeedPct;
 
     const channelsY = getChannelCenters();
 
@@ -605,11 +677,14 @@ function update(dt) {
         if (stream.length > 0) {
             let first = stream[0];
             if (first.endX < 0) {
+                // Logic when leaving screen
                 if (first.def.type === 'BAD' && first.active) {
                     gameState.integrity -= 15; 
                 }
-                if (first.def.type === 'GOOD' && first.active) {
-                    showPassiveFeedback(first.def.name, ch); // Passa indice do canal
+                // Check if GOOD signal was preserved (active AND !destroyed)
+                if (first.def.type === 'GOOD' && first.active && !first.destroyed) {
+                    gameState.stats.clinicalPreserved++;
+                    showPassiveFeedback(first.def.name, ch);
                     gameState.score += 5; 
                 }
                 stream.shift();
@@ -632,7 +707,6 @@ function draw() {
     
     const channelsY = getChannelCenters();
 
-    // Grid
     ctx.strokeStyle = '#1a2f38';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -656,27 +730,38 @@ function draw() {
             ctx.beginPath();
             
             let color;
-            if (seg.def.type === 'NEUTRAL') {
-                color = '#00ff9d'; // Baseline sempre verde
-            }
-            else if (gameState.difficulty === 'EXPERT') {
-                if (!seg.active && seg.def.type === 'BAD') color = '#1a4030';
-                else color = '#00ff9d'; 
-            } 
-            else if (gameState.difficulty === 'ANALYST') {
-                if (!seg.active) color = '#2a4a3a';
-                else if (seg.camo) color = '#00ff9d'; 
-                else color = seg.def.color;
-            }
-            else {
-                color = seg.active ? seg.def.color : '#2a4a3a';
+            
+            // Logic for DESTROYED/BURNT signal
+            if (seg.destroyed) {
+                color = '#444'; // Burnt color (Dark Grey)
+                ctx.globalAlpha = 0.4; // Semi-transparent
+            } else {
+                ctx.globalAlpha = 1.0; // Reset alpha
+                // Normal Color Logic
+                if (seg.def.type === 'NEUTRAL') {
+                    color = '#00ff9d';
+                }
+                else if (gameState.difficulty === 'EXPERT') {
+                    if (!seg.active && seg.def.type === 'BAD') color = '#1a4030';
+                    else color = '#00ff9d'; 
+                } 
+                else if (gameState.difficulty === 'ANALYST') {
+                    if (!seg.active) color = '#2a4a3a';
+                    else if (seg.camo) color = '#00ff9d'; 
+                    else color = seg.def.color;
+                }
+                else {
+                    color = seg.active ? seg.def.color : '#2a4a3a';
+                }
             }
 
             ctx.strokeStyle = color;
             
             let glow = false;
-            if (gameState.difficulty === 'INTERN' && seg.def.type === 'BAD' && seg.active) glow = true;
-            if (gameState.difficulty === 'ANALYST' && seg.def.type === 'BAD' && seg.active && !seg.camo) glow = true;
+            if (!seg.destroyed) { // No glow if destroyed
+                if (gameState.difficulty === 'INTERN' && seg.def.type === 'BAD' && seg.active) glow = true;
+                if (gameState.difficulty === 'ANALYST' && seg.def.type === 'BAD' && seg.active && !seg.camo) glow = true;
+            }
             
             if (glow) {
                 ctx.shadowBlur = 15; ctx.shadowColor = color;
@@ -692,6 +777,7 @@ function draw() {
                 if (i===0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
             }
             ctx.stroke();
+            ctx.globalAlpha = 1.0; // Reset for next segment
         }
     }
 }
@@ -717,14 +803,52 @@ function gameOver() {
     if(window.Telegram.WebApp.HapticFeedback) window.Telegram.WebApp.HapticFeedback.notificationOccurred('error');
     ui.overlay.style.display = 'flex';
     
-    let rank = gameState.score > 1500 ? "SÊNIOR" : (gameState.score > 800 ? "PLENO" : "JÚNIOR");
-    
+    let artCleansed = gameState.stats.artifactsCleared;
+    let artTotal = gameState.stats.artifactsSpawned;
+    let artPct = artTotal > 0 ? Math.floor((artCleansed / artTotal) * 100) : 0;
+
+    let clinPreserved = gameState.stats.clinicalPreserved;
+    let clinTotal = gameState.stats.clinicalSpawned; 
+    let clinPct = clinTotal > 0 ? Math.floor((clinPreserved / clinTotal) * 100) : 0;
+
+    let avgAccuracy = (artPct + clinPct) / 100;
+    let speedVal = gameState.stats.maxSpeedPercent;
+    let finalScore = Math.floor(gameState.score);
+    let ultraScore = Math.floor(finalScore + (avgAccuracy * speedVal));
+
+    let diffColor = "#888";
+    if (gameState.difficulty === 'ANALYST') diffColor = "#ffbb00";
+    if (gameState.difficulty === 'EXPERT') diffColor = "#ff3366";
+
     ui.overlay.innerHTML = `
-        <h1 style="color: #ff3366">SISTEMA FALHOU</h1>
-        <p>RANK: <strong style="color:#fff">${rank}</strong></p>
-        <div class="hud-box" style="margin: 20px; padding: 20px;">
-            SCORE FINAL: <span style="color: white; font-size: 1.5em">${Math.floor(gameState.score)}</span>
+        <h1 style="color: #ff3366; font-size: 2rem;">RELATÓRIO DE INCIDENTE</h1>
+        <div style="color:${diffColor}; margin-bottom:5px; font-weight:bold;">${gameState.difficulty} MODE | ${gameState.numChannels} CANAIS</div>
+        
+        <div class="stats-container">
+            <div class="stat-row">
+                <span>Artefatos Eliminados:</span>
+                <span class="stat-val val-good">${artCleansed} / ${artTotal} (${artPct}%)</span>
+            </div>
+            <div class="stat-row">
+                <span>Sinais Clínicos Preservados:</span>
+                <span class="stat-val val-neu">${clinPreserved} / ${clinTotal} (${clinPct}%)</span>
+            </div>
+            <div class="stat-row">
+                <span>Nível de Estresse (Vel):</span>
+                <span class="stat-val">${speedVal}%</span>
+            </div>
         </div>
+
+        <div class="hud-box" style="padding: 10px; margin-bottom: 10px; border-color: #fff; width: 80%;">
+            SCORE FINAL: <span style="color: white; font-size: 1.2em">${finalScore}</span>
+        </div>
+
+        <div class="ultra-score-box">
+            <div style="font-size: 0.9em; color: var(--text-info); letter-spacing: 2px;">ULTRA SCORE</div>
+            <div style="font-size: 2em; color: #fff; font-weight: bold; text-shadow: 0 0 10px var(--text-info);">${ultraScore}</div>
+            <div class="calc-detail">Score + (Precisão Média × Vel Máxima)</div>
+        </div>
+
         <button onclick="location.reload()">REINICIAR SISTEMA</button>
     `;
 }
