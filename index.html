@@ -243,8 +243,9 @@
 
     <div id="overlay">
         <h1 class="glitch-text">NEURO-GLITCH</h1>
-        <!-- VERSÃO NO TOPO -->
-        <div style="font-size: 0.7rem; color: #444; margin-top: -5px; margin-bottom: 15px;">v5.6</div>
+        
+        <!-- VERSÃO -->
+        <div style="font-size: 0.7rem; color: #444; margin-top: -5px; margin-bottom: 15px;">v5.7</div>
         
         <!-- INSTRUÇÕES BREVES -->
         <div style="margin-bottom: 20px; border: 1px solid #333; padding: 10px; border-radius: 4px; background: rgba(0,0,0,0.3); max-width: 80%;">
@@ -285,9 +286,10 @@
 
 <script>
 /**
- * NEURO-GLITCH v5.6 (Final Release)
- * - Version number added to Start Screen.
- * - "Precisão Média" changed to "Precisão Clínica" in Ultra Score calculation display.
+ * NEURO-GLITCH v5.7 (Analyst Patch)
+ * - Game Over Report Localized (Estágio/Analista/Especialista).
+ * - Game Over Report Channel pluralization fixed.
+ * - Analyst Mode: Clinical signals also get camouflaged at high speeds.
  */
 
 // --- SEGURANÇA ---
@@ -545,8 +547,16 @@ function spawnNextSegment(channelIdx) {
 
     const newSeg = new WaveSegment(startX, width, type);
     
-    if (gameState.difficulty === 'ANALYST' && gameState.currentSpeed > 400 && type.type === 'BAD') {
-        if (Math.random() < 0.5) newSeg.camo = true;
+    // Lógica Analista: Camuflagem
+    if (gameState.difficulty === 'ANALYST') {
+        // Artifacts (BAD) camo start at speed 400
+        if (type.type === 'BAD' && gameState.currentSpeed > 400) {
+            if (Math.random() < 0.5) newSeg.camo = true;
+        }
+        // Clinical (GOOD) camo start at speed 550 (Justiça: fica difícil distinguir tudo)
+        if (type.type === 'GOOD' && gameState.currentSpeed > 550) {
+             if (Math.random() < 0.5) newSeg.camo = true;
+        }
     }
 
     stream.push(newSeg);
@@ -577,7 +587,7 @@ function checkHit(x, y) {
             const stream = gameState.streams[ch];
             for (let seg of stream) {
                 if (canvasX >= seg.x && canvasX <= seg.endX && seg.def.type !== 'NEUTRAL') {
-                    if (seg.active && !seg.destroyed) { // Check active AND !destroyed
+                    if (seg.active && !seg.destroyed) { 
                         processHit(seg, canvasX, canvasY);
                         return; 
                     }
@@ -613,8 +623,9 @@ function processHit(seg, x, y) {
         msg = `${seg.def.name}${bonusTxt}\nLIMPO!\n+${pointsAdded}`;
         color = '#00ff9d';
         
+        // COR DIFERENTE PARA CAMUFLAGEM
         if (gameState.difficulty === 'ANALYST' && seg.camo) {
-             color = '#ffbb00';
+             color = '#ffbb00'; // Laranja Analista
         }
         
         if(window.Telegram.WebApp.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
@@ -686,7 +697,7 @@ function update(dt) {
                 if (first.def.type === 'BAD' && first.active) {
                     gameState.integrity -= 15; 
                 }
-                // Check if GOOD signal was preserved (active AND !destroyed)
+                // Check if GOOD signal was preserved
                 if (first.def.type === 'GOOD' && first.active && !first.destroyed) {
                     gameState.stats.clinicalPreserved++;
                     showPassiveFeedback(first.def.name, ch);
@@ -736,13 +747,11 @@ function draw() {
             
             let color;
             
-            // Logic for DESTROYED/BURNT signal
             if (seg.destroyed) {
-                color = '#444'; // Burnt color (Dark Grey)
-                ctx.globalAlpha = 0.4; // Semi-transparent
+                color = '#444'; 
+                ctx.globalAlpha = 0.4; 
             } else {
-                ctx.globalAlpha = 1.0; // Reset alpha
-                // Normal Color Logic
+                ctx.globalAlpha = 1.0; 
                 if (seg.def.type === 'NEUTRAL') {
                     color = '#00ff9d';
                 }
@@ -763,7 +772,7 @@ function draw() {
             ctx.strokeStyle = color;
             
             let glow = false;
-            if (!seg.destroyed) { // No glow if destroyed
+            if (!seg.destroyed) { 
                 if (gameState.difficulty === 'INTERN' && seg.def.type === 'BAD' && seg.active) glow = true;
                 if (gameState.difficulty === 'ANALYST' && seg.def.type === 'BAD' && seg.active && !seg.camo) glow = true;
             }
@@ -822,12 +831,17 @@ function gameOver() {
     let ultraScore = Math.floor(finalScore + (avgAccuracy * speedVal));
 
     let diffColor = "#888";
-    if (gameState.difficulty === 'ANALYST') diffColor = "#ffbb00";
-    if (gameState.difficulty === 'EXPERT') diffColor = "#ff3366";
+    let diffName = "ESTÁGIO";
+    
+    if (gameState.difficulty === 'ANALYST') { diffColor = "#ffbb00"; diffName = "ANALISTA"; }
+    else if (gameState.difficulty === 'EXPERT') { diffColor = "#ff3366"; diffName = "ESPECIALISTA"; }
+
+    // Pluralidade correta de canais
+    let chText = gameState.numChannels === 1 ? "1 CANAL" : gameState.numChannels + " CANAIS";
 
     ui.overlay.innerHTML = `
         <h1 style="color: #ff3366; font-size: 2rem;">RELATÓRIO DE INCIDENTE</h1>
-        <div style="color:${diffColor}; margin-bottom:5px; font-weight:bold;">${gameState.difficulty} MODE | ${gameState.numChannels} CANAIS</div>
+        <div style="color:${diffColor}; margin-bottom:5px; font-weight:bold;">MODO: ${diffName} | ${chText}</div>
         
         <div class="stats-container">
             <div class="stat-row">
